@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code History · Teacher View</title>
+<style>
+:root{--bg:#f5f6f8;--panel:#fff;--ink:#1c2230;--muted:#667085;--line:#dde2ea;--accent:#2b63d9;--red:#c2362b;--redbg:#fde2df;--amber:#a56a0f;--amberbg:#fdf0d5;--green:#1f8a4c;--greenbg:#dcf3e5;--grey:#8a93a3}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+header h1{font-size:17px;margin:0}
+header .sub{color:var(--muted);font-size:13px}
+.spacer{flex:1}
+button,select{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 12px;border-radius:8px;cursor:pointer}
+button:hover{border-color:#aab3c2}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.wrap{max-width:1400px;margin:0 auto;padding:16px 20px 40px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.card h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+#drop{border:2px dashed var(--line);border-radius:10px;padding:26px;text-align:center;color:var(--muted);background:var(--panel);margin-bottom:16px}
+#drop.over{border-color:var(--accent);background:#eef3fd}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:#f3f6fb}
+tbody tr.sel{background:#e8effd}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;margin:1px 4px 1px 0;white-space:nowrap}
+.chip.red{background:var(--redbg);color:var(--red)}
+.chip.amber{background:var(--amberbg);color:var(--amber)}
+.chip.green{background:var(--greenbg);color:var(--green)}
+.tablewrap{overflow-x:auto}
+#detail{display:none}
+.dhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:8px}
+.dhead h2{font-size:20px;margin:0;text-transform:none;letter-spacing:0;color:var(--ink)}
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 10px}
+.stat{background:var(--bg);border-radius:8px;padding:6px 10px;font-size:13px;color:var(--muted)}
+.stat b{display:block;font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums}
+#flags{margin:4px 0 10px}
+#flags div{font-size:14px;margin:3px 0}
+canvas{width:100%;height:110px;display:block;border:1px solid var(--line);border-radius:8px;cursor:pointer;background:#fbfcfd}
+.controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0}
+.controls input[type=range]{flex:1;min-width:200px}
+#posLabel{font-size:13px;color:var(--muted);min-width:230px;font-variant-numeric:tabular-nums}
+.cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px}
+@media (max-width:900px){.cols{grid-template-columns:1fr}}
+.legend{font-size:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid var(--line)}
+#code{margin:0;height:520px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#fbfcfd;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;padding:8px 0;counter-reset:ln}
+#code .ln{display:block;padding:0 10px 0 52px;position:relative;white-space:pre-wrap;word-break:break-all;min-height:1.55em}
+#code .ln::before{counter-increment:ln;content:counter(ln);position:absolute;left:0;width:40px;text-align:right;color:#a9b1bd}
+.tp{background:var(--redbg);color:#8d1f16}
+.ts{color:var(--grey)}
+.cur{outline:2px solid var(--accent);outline-offset:-1px;border-radius:2px}
+.caret{display:inline-block;width:0;border-left:2px solid var(--accent);height:1.2em;vertical-align:-3px;margin:0 -1px}
+#events{height:560px;overflow:auto;border:1px solid var(--line);border-radius:8px;font-size:13px}
+.ev{padding:6px 10px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:8px}
+.ev:hover{background:#f3f6fb}
+.ev.now{background:#e8effd}
+.ev time{color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.ev .k-red{color:var(--red);font-weight:600}
+.ev .k-amber{color:var(--amber);font-weight:600}
+.ev .k-sess{font-weight:600}
+.ev code{display:block;background:var(--bg);padding:3px 6px;border-radius:4px;margin-top:3px;white-space:pre-wrap;word-break:break-all;max-height:5.6em;overflow:hidden;font-size:12px}
+.linkmaker{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center;max-width:780px}
+.linkmaker input[type=text]{font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:8px;width:100%}
+#linkOut{font:13px ui-monospace,Menlo,Consolas,monospace;background:var(--bg);padding:8px 10px;border-radius:8px;word-break:break-all;margin:10px 0 6px}
+.muted{color:var(--muted);font-size:13px}
+details summary{cursor:pointer;font-weight:600;font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Code History</h1><span class="sub">Teacher view · files are read in this browser only, nothing is uploaded</span>
+  <div class="spacer"></div>
+  <button class="primary" id="loadBtn">Load submissions</button>
+  <input type="file" id="fileIn" multiple accept=".json,application/json" hidden>
+</header>
+<div class="wrap">
+
+  <div class="card">
+    <details id="lmDetails">
+      <summary>Make a task link for students</summary>
+      <div style="height:10px"></div>
+      <div class="linkmaker">
+        <label for="lmTask">Task name</label><input type="text" id="lmTask" placeholder="e.g. Y10 Password Checker">
+        <label for="lmStarter">Starter file</label><input type="text" id="lmStarter" placeholder="optional, e.g. starters/password.py">
+        <span></span><label><input type="checkbox" id="lmNopaste"> Block pasting from outside the editor</label>
+      </div>
+      <div id="linkOut"></div>
+      <button id="lmCopy">Copy link</button> <span class="muted" id="lmMsg"></span>
+    </details>
+  </div>
+
+  <div id="drop">Drag students’ <b>.pyhist.json</b> files here, or click <b>Load submissions</b>. You can load a whole class at once.</div>
+
+  <div class="card" id="summaryCard" style="display:none">
+    <h2>Submissions</h2>
+    <div class="tablewrap"><table>
+      <thead><tr>
+        <th data-k="student">Student</th><th data-k="task">Task</th><th data-k="activeMs" class="num">Active time</th>
+        <th data-k="sessions" class="num">Sessions</th><th data-k="lines" class="num">Lines</th>
+        <th data-k="pctOut" class="num">From outside</th><th data-k="largest" class="num">Largest paste</th>
+        <th data-k="awayCount" class="num">Left page</th><th data-k="runs" class="num">Runs (errors)</th><th data-k="score">Flags</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card" id="detail">
+    <div class="dhead"><h2 id="dName"></h2><span class="muted" id="dTask"></span><div class="spacer"></div><button id="dlPy">Download final .py</button></div>
+    <div class="stats" id="dStats"></div>
+    <div id="flags"></div>
+    <canvas id="tl" height="110"></canvas>
+    <div class="legend" style="margin-top:6px">
+      <span><span class="sw" style="background:#5b8def"></span>typing</span>
+      <span><span class="sw" style="background:#d9463b"></span>paste from outside</span>
+      <span><span class="sw" style="background:#e3e6eb"></span>left the page</span>
+      <span><span class="sw" style="background:#2e9e5b"></span>run ok</span>
+      <span><span class="sw" style="background:#e0a030"></span>run with error</span>
+      <span>dashed line = new session · long idle gaps are compressed</span>
+    </div>
+    <div class="controls">
+      <button id="bStart" title="Back to start">⏮</button>
+      <button id="bPlay" class="primary">▶ Play</button>
+      <select id="speed"><option value="1">1×</option><option value="4">4×</option><option value="16" selected>16×</option><option value="64">64×</option></select>
+      <input type="range" id="slider" min="0" max="0" value="0">
+      <button id="bEnd" title="Jump to final version">⏭</button>
+      <span id="posLabel"></span>
+    </div>
+    <div class="cols">
+      <div>
+        <div class="legend"><span><span class="sw" style="background:#fff"></span>typed in the editor</span><span><span class="sw" style="background:var(--redbg)"></span>pasted from outside</span><span><span class="sw" style="background:#fff;border-color:#bbb"></span><span style="color:var(--grey)">starter code</span></span><span><span class="sw" style="border:2px solid var(--accent)"></span>latest change</span></div>
+        <pre id="code"></pre>
+      </div>
+      <div>
+        <div class="legend">Key moments — click to jump</div>
+        <div id="events"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ===== CORE-START (analysis, shared logic) ===== */
+const FORMAT = 'pyhist-1';
+function cyrb53(str, seed = 0) {
+  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0, ch; i < str.length; i++) {
+    ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+  h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+  h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
+function initChain(o) { return cyrb53([o.format, o.student, o.task, o.created].join('|'), 7919); }
+function nextChain(prev, ev) { return cyrb53(prev + '|' + JSON.stringify(ev), 7919); }
+
+function newState() { return { text: '', tags: [], recent: [], clip: null }; }
+function cloneState(st) { return { text: st.text, tags: st.tags.slice(), recent: st.recent.slice(), clip: st.clip }; }
+const fill = (n, c) => new Array(n).fill(c);
+
+/* apply one event to a replay state; tags: t typed, p pasted-outside, s starter */
+function step(st, ev) {
+  if (ev[0] === 'c') {
+    const i = ev[2], n = ev[3];
+    st.clip = { s: st.text.slice(i, i + n), tags: st.tags.slice(i, i + n) };
+    return;
+  }
+  if (ev[0] !== 'e') return;
+  const i = ev[2], d = ev[3], s = ev[4], o = ev[5];
+  if (d > 0) {
+    st.recent.push({ s: st.text.slice(i, i + d), tags: st.tags.slice(i, i + d) });
+    if (st.recent.length > 80) st.recent.shift();
+  }
+  let nt = null;
+  if (!s) nt = [];
+  else if (o === 'p') nt = fill(s.length, 'p');
+  else if (o === 's') nt = fill(s.length, 's');
+  else if (o === 't') nt = fill(s.length, 't');
+  else {
+    // copied, undone or moved text keeps the origin of where it came from
+    if (o === 'q' && st.clip && st.clip.s === s) nt = st.clip.tags.slice();
+    if (!nt) for (let r = st.recent.length - 1; r >= 0; r--) if (st.recent[r].s === s) { nt = st.recent[r].tags.slice(); break; }
+    if (!nt) { const j = st.text.indexOf(s); if (j >= 0) nt = st.tags.slice(j, j + s.length); }
+    if (!nt) nt = fill(s.length, 't');
+  }
+  st.text = st.text.slice(0, i) + s + st.text.slice(i + d);
+  st.tags = st.tags.slice(0, i).concat(nt, st.tags.slice(i + d));
+}
+
+function analyse(o) {
+  const E = o.events;
+  let c = initChain(o);
+  for (const ev of E) c = nextChain(c, ev);
+  const chainOk = c === o.chain;
+
+  const st = newState();
+  const cps = [];            // checkpoints: state before event k
+  const pts = [], cts = [];  // playback time (gaps capped 3s) and chart time (gaps capped 60s)
+  let pt = 0, ct = 0, prevT = null;
+  const m = { typed: 0, deleted: 0, pastes: [], largest: 0, runs: 0, errors: 0, sessions: 0,
+              awayCount: 0, awayMs: 0, activeMs: 0, bulk: [], retype: [], loadsEdited: 0, saves: 0 };
+  const notable = [];
+  let awayStart = null, win = null;
+  const closeWin = () => {
+    if (win && win.typed >= 150 && win.del <= win.typed * 0.05) m.retype.push({ k: win.k, t: win.t, chars: win.typed });
+    win = null;
+  };
+  for (let k = 0; k < E.length; k++) {
+    if (k % 300 === 0) cps.push({ k, st: cloneState(st) });
+    const ev = E[k], t = ev[1];
+    if (prevT !== null) {
+      const dt = Math.max(0, t - prevT);
+      pt += Math.min(dt, 3000);
+      ct += ev[0] === 's' ? 60000 : Math.min(dt, 60000);
+      if (dt < 120000) m.activeMs += dt;
+    }
+    prevT = t; pts.push(pt); cts.push(ct);
+    if (win && (t > win.until || ev[0] === 'a')) closeWin();
+
+    switch (ev[0]) {
+      case 'e': {
+        const s = ev[4], o2 = ev[5];
+        m.deleted += ev[3];
+        if (win) win.del += ev[3];
+        if (o2 === 't') {
+          m.typed += s.length;
+          if (win) win.typed += s.length;
+          if (s.length >= 30) { m.bulk.push({ k, t, len: s.length }); notable.push({ k, t, kind: 'amber', label: 'Text appeared in one go without a paste (' + s.length + ' chars)', text: s }); }
+        } else if (o2 === 'p') {
+          m.pastes.push({ k, t, len: s.length });
+          if (s.length > m.largest) m.largest = s.length;
+          notable.push({ k, t, kind: s.length >= 80 ? 'red' : 'amber', label: 'Pasted from outside (' + s.length + ' chars)', text: s });
+        } else if (o2 === 's' && s) {
+          notable.push({ k, t, kind: '', label: 'Starter code loaded (' + s.length + ' chars)' });
+        }
+        break;
+      }
+      case 'r':
+        m.runs++;
+        if (!ev[2]) { m.errors++; notable.push({ k, t, kind: '', label: 'Ran code — error', text: ev[3] }); }
+        break;
+      case 's':
+        m.sessions++;
+        notable.push({ k, t, kind: 'sess', label: 'Session ' + m.sessions + ' started', date: true });
+        break;
+      case 'a': awayStart = t; break;
+      case 'b':
+        if (awayStart !== null) {
+          const dur = t - awayStart;
+          m.awayCount++; m.awayMs += dur;
+          if (dur >= 10000) notable.push({ k, t, kind: dur >= 60000 ? 'amber' : '', label: 'Came back after leaving the page for ' + fmtDur(dur) });
+          awayStart = null;
+          win = { k, t, until: t + 180000, typed: 0, del: 0 };
+        }
+        break;
+      case 'l':
+        if (!ev[2]) { m.loadsEdited++; notable.push({ k, t, kind: 'red', label: 'Opened a save file that had been edited outside the workspace' }); }
+        else notable.push({ k, t, kind: '', label: 'Opened a saved work file' });
+        break;
+      case 'v': m.saves++; notable.push({ k, t, kind: '', label: 'Saved work' }); break;
+    }
+    step(st, ev);
+  }
+  closeWin();
+  for (const r of m.retype) notable.push({ k: r.k, t: r.t, kind: 'amber', label: 'Smooth typing of ' + r.chars + ' chars with almost no corrections, straight after returning to the page' });
+  notable.sort((a, b) => a.k - b.k);
+
+  const finalText = st.text;
+  const outside = st.tags.filter(x => x === 'p').length;
+  const own = st.tags.filter(x => x !== 's').length;
+  m.pctOut = own ? outside / own : 0;
+  m.lines = finalText ? finalText.split('\n').length : 0;
+  const replayOk = typeof o.final !== 'string' || o.final === finalText;
+
+  const flags = [];
+  if (!chainOk) flags.push(['red', 'File was edited outside the workspace (checksum mismatch)']);
+  if (!replayOk) flags.push(['red', 'Final code does not match the recorded history']);
+  if (m.loadsEdited) flags.push(['red', 'Continued from an edited save file']);
+  if (m.pctOut >= 0.2 && own > 50) flags.push(['red', Math.round(m.pctOut * 100) + '% of final code was pasted from outside']);
+  else if (m.pctOut >= 0.05 && own > 50) flags.push(['amber', Math.round(m.pctOut * 100) + '% of final code was pasted from outside']);
+  if (m.largest >= 300) flags.push(['red', 'A single paste of ' + m.largest + ' chars']);
+  else if (m.largest >= 80) flags.push(['amber', 'A paste of ' + m.largest + ' chars']);
+  if (m.bulk.length) flags.push(['amber', m.bulk.length + '× text appeared in one go without a paste']);
+  if (m.retype.length) flags.push(['amber', m.retype.length + '× smooth uncorrected typing right after returning to the page']);
+  if (E.length && m.activeMs < 5 * 60000 && own > 400) flags.push(['amber', 'Lots of code for very little active time']);
+  const score = flags.reduce((a, f) => a + (f[0] === 'red' ? 10 : 1), 0);
+
+  return { o, E, chainOk, replayOk, cps, pts, cts, m, notable, finalText, finalTags: st.tags, flags, score };
+}
+
+/* state after the first p events */
+function seek(A, p) {
+  let cp = A.cps[0];
+  for (const c of A.cps) { if (c.k <= p) cp = c; else break; }
+  const st = cloneState(cp ? cp.st : newState());
+  for (let k = cp ? cp.k : 0; k < p; k++) step(st, A.E[k]);
+  return st;
+}
+
+function fmtDur(ms) {
+  const s = Math.round(ms / 1000);
+  if (s < 60) return s + 's';
+  const mnt = Math.round(s / 60);
+  if (mnt < 60) return mnt + ' min';
+  return Math.floor(mnt / 60) + 'h ' + String(mnt % 60).padStart(2, '0') + 'm';
+}
+/* ===== CORE-END ===== */
+
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const fmtTime = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const fmtDate = t => new Date(t).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
+
+let subs = [];      // analysed submissions
+let cur = null;     // selected
+let pos = 0;        // events applied
+let sortKey = 'score', sortDir = -1;
+
+/* ---------- loading ---------- */
+async function loadFiles(files) {
+  let bad = 0;
+  for (const f of files) {
+    try {
+      const o = JSON.parse(await f.text());
+      if (!o || o.format !== FORMAT || !Array.isArray(o.events)) throw 0;
+      const A = analyse(o);
+      A.fileName = f.name;
+      // replace an older upload of the same student + task
+      subs = subs.filter(x => !(x.o.student === o.student && x.o.task === o.task));
+      subs.push(A);
+    } catch (e) { bad++; }
+  }
+  if (bad) alert(bad + ' file(s) could not be read as Code History files.');
+  renderTable();
+  if (subs.length === 1) select(subs[0]);
+}
+$('loadBtn').onclick = () => { $('fileIn').value = ''; $('fileIn').click(); };
+$('fileIn').onchange = () => loadFiles([...$('fileIn').files]);
+const drop = $('drop');
+drop.onclick = () => $('loadBtn').click();
+['dragenter', 'dragover'].forEach(n => document.addEventListener(n, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(n => document.addEventListener(n, e => { e.preventDefault(); if (n === 'drop' || e.target === drop) drop.classList.remove('over'); }));
+document.addEventListener('drop', e => { if (e.dataTransfer.files.length) loadFiles([...e.dataTransfer.files]); });
+
+/* ---------- summary table ---------- */
+const val = (A, k) => k === 'student' || k === 'task' ? A.o[k].toLowerCase() : k === 'score' ? A.score : A.m[k];
+function renderTable() {
+  $('summaryCard').style.display = subs.length ? '' : 'none';
+  subs.sort((a, b) => { const x = val(a, sortKey), y = val(b, sortKey); return (x < y ? -1 : x > y ? 1 : 0) * sortDir; });
+  $('tbody').innerHTML = '';
+  for (const A of subs) {
+    const m = A.m, tr = document.createElement('tr');
+    if (A === cur) tr.className = 'sel';
+    const chips = A.flags.length ? A.flags.map(f => `<span class="chip ${f[0]}">${esc(f[1])}</span>`).join('') : '<span class="chip green">Nothing unusual</span>';
+    tr.innerHTML = `<td><b>${esc(A.o.student)}</b></td><td>${esc(A.o.task)}</td>
+      <td class="num">${fmtDur(m.activeMs)}</td><td class="num">${m.sessions}</td><td class="num">${m.lines}</td>
+      <td class="num">${Math.round(m.pctOut * 100)}%</td><td class="num">${m.largest ? m.largest + ' ch' : '—'}</td>
+      <td class="num">${m.awayCount}</td><td class="num">${m.runs} (${m.errors})</td><td>${chips}</td>`;
+    tr.onclick = () => select(A);
+    $('tbody').appendChild(tr);
+  }
+}
+document.querySelectorAll('th[data-k]').forEach(th => th.onclick = () => {
+  const k = th.dataset.k;
+  if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = (k === 'student' || k === 'task') ? 1 : -1; }
+  renderTable();
+});
+
+/* ---------- detail ---------- */
+function select(A) {
+  stop();
+  cur = A;
+  renderTable();
+  $('detail').style.display = 'block';
+  $('dName').textContent = A.o.student;
+  const first = A.E.length ? A.E[0][1] : A.o.created, last = A.E.length ? A.E[A.E.length - 1][1] : first;
+  $('dTask').textContent = A.o.task + ' · ' + fmtDate(first) + ' – ' + fmtDate(last) + (A.o.nopaste ? ' · pasting blocked' : '');
+  const m = A.m;
+  const stat = (b, s) => `<div class="stat"><b>${b}</b>${s}</div>`;
+  $('dStats').innerHTML = stat(fmtDur(m.activeMs), 'active time') + stat(m.sessions, 'sessions') + stat(m.typed.toLocaleString(), 'chars typed') +
+    stat(m.deleted.toLocaleString(), 'chars deleted') + stat(m.pastes.length, 'outside pastes') + stat(Math.round(m.pctOut * 100) + '%', 'final code from outside') +
+    stat(m.awayCount + ' · ' + fmtDur(m.awayMs), 'left page · total') + stat(m.runs + ' / ' + m.errors, 'runs / errors') + stat(m.saves, 'saves');
+  const integ = A.chainOk && A.replayOk && !m.loadsEdited ? '<div><span class="chip green">History intact</span> File checksum and replay both check out.</div>' : '';
+  $('flags').innerHTML = integ + A.flags.map(f => `<div><span class="chip ${f[0]}">${f[0] === 'red' ? 'Check' : 'Look at'}</span>${esc(f[1])}</div>`).join('');
+  $('slider').max = A.E.length;
+  renderEvents();
+  setPos(A.E.length);
+  $('detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderEvents() {
+  const box = $('events'); box.innerHTML = '';
+  for (const n of cur.notable) {
+    const d = document.createElement('div'); d.className = 'ev'; d.dataset.k = n.k;
+    const cls = n.kind === 'red' ? 'k-red' : n.kind === 'amber' ? 'k-amber' : n.kind === 'sess' ? 'k-sess' : '';
+    d.innerHTML = `<time>${n.date ? fmtDate(n.t) + ' ' : ''}${fmtTime(n.t)}</time><div><span class="${cls}">${esc(n.label)}</span>${n.text ? `<code>${esc(n.text.slice(0, 400))}</code>` : ''}</div>`;
+    d.onclick = () => { stop(); setPos(n.k + 1); };
+    box.appendChild(d);
+  }
+  if (!cur.notable.length) box.innerHTML = '<div class="ev">No events recorded.</div>';
+}
+
+function setPos(p) {
+  pos = Math.max(0, Math.min(p, cur.E.length));
+  $('slider').value = pos;
+  const st = pos === cur.E.length ? { text: cur.finalText, tags: cur.finalTags } : seek(cur, pos);
+  let hl = null;
+  const ev = pos > 0 ? cur.E[pos - 1] : null;
+  if (ev && ev[0] === 'e' && pos < cur.E.length + 1) hl = { i: ev[2], n: ev[4].length };
+  renderCode(st, hl);
+  const t = ev ? ev[1] : (cur.E[0] ? cur.E[0][1] : cur.o.created);
+  $('posLabel').textContent = `step ${pos} of ${cur.E.length} · ${fmtDate(t)} ${fmtTime(t)}`;
+  drawTimeline();
+  // highlight nearest key moment
+  let best = null;
+  document.querySelectorAll('.ev').forEach(el => { el.classList.remove('now'); if (+el.dataset.k < pos) best = el; });
+  if (best) best.classList.add('now');
+}
+
+function renderCode(st, hl) {
+  const { text, tags } = st;
+  let html = '<span class="ln">', runCls = null, buf = '';
+  const flush = () => { if (buf) { html += runCls ? `<span class="${runCls}">${esc(buf)}</span>` : esc(buf); buf = ''; } };
+  const hs = hl ? hl.i : -1, he = hl ? hl.i + hl.n : -1;
+  for (let i = 0; i <= text.length; i++) {
+    if (i === hs) { flush(); html += hl.n ? '<span class="cur" id="curMark">' : '<span class="caret" id="curMark"></span>'; }
+    if (i === he && hl && hl.n) { flush(); html += '</span>'; }
+    if (i === text.length) break;
+    const ch = text[i];
+    if (ch === '\n') {
+      flush();
+      if (hl && hl.n && i >= hs && i < he) html += '</span></span><span class="ln"><span class="cur">';
+      else html += '</span><span class="ln">';
+      continue;
+    }
+    const cls = tags[i] === 'p' ? 'tp' : tags[i] === 's' ? 'ts' : null;
+    if (cls !== runCls) { flush(); runCls = cls; }
+    buf += ch;
+  }
+  flush();
+  html += '</span>';
+  const box = $('code');
+  box.innerHTML = html;
+  const mk = $('curMark');
+  if (mk) {
+    const r = mk.getBoundingClientRect(), b = box.getBoundingClientRect();
+    if (r.top < b.top || r.bottom > b.bottom) box.scrollTop += r.top - b.top - box.clientHeight / 3;
+  }
+}
+
+/* ---------- timeline ---------- */
+function drawTimeline() {
+  const cv = $('tl'), dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth, H = 110;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, W, H);
+  const A = cur, E = A.E, n = E.length;
+  if (!n) return;
+  const max = A.cts[n - 1] || 1, pad = 6, w = W - pad * 2;
+  const X = k => pad + (A.cts[k] / max) * w;
+  // away bands
+  let aK = null;
+  g.fillStyle = '#e3e6eb';
+  for (let k = 0; k < n; k++) {
+    if (E[k][0] === 'a') aK = k;
+    if (E[k][0] === 'b' && aK !== null) { g.fillRect(X(aK), 0, Math.max(2, X(k) - X(aK)), H - 14); aK = null; }
+  }
+  // typing buckets
+  const bw = 3, nb = Math.ceil(w / bw) + 1, buckets = new Array(nb).fill(0);
+  for (let k = 0; k < n; k++) if (E[k][0] === 'e' && E[k][5] === 't') buckets[Math.floor((X(k) - pad) / bw)] += E[k][4].length;
+  const bmax = Math.max(20, ...buckets);
+  g.fillStyle = '#5b8def';
+  buckets.forEach((v, b) => { if (v) { const h = Math.max(2, (v / bmax) * (H - 34)); g.fillRect(pad + b * bw, H - 16 - h, bw - 1, h); } });
+  // sessions, pastes, runs
+  for (let k = 0; k < n; k++) {
+    const ev = E[k], x = X(k);
+    if (ev[0] === 's' && k > 0) { g.strokeStyle = '#8a93a3'; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H - 14); g.stroke(); g.setLineDash([]); }
+    if (ev[0] === 'e' && ev[5] === 'p') { const h = Math.min(H - 20, 14 + Math.log2(1 + ev[4].length) * 7); g.fillStyle = '#d9463b'; g.fillRect(x - 1.5, H - 16 - h, 3, h); }
+    if (ev[0] === 'r') { g.fillStyle = ev[2] ? '#2e9e5b' : '#e0a030'; g.fillRect(x - 1, H - 12, 2.5, 10); }
+  }
+  // position
+  const px = pos === 0 ? pad : X(pos - 1);
+  g.strokeStyle = '#1c2230'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(px, 0); g.lineTo(px, H); g.stroke(); g.lineWidth = 1;
+}
+$('tl').onclick = e => {
+  if (!cur || !cur.E.length) return;
+  stop();
+  const r = $('tl').getBoundingClientRect(), max = cur.cts[cur.E.length - 1] || 1;
+  const target = ((e.clientX - r.left - 6) / (r.width - 12)) * max;
+  let k = 0; while (k < cur.E.length - 1 && cur.cts[k] < target) k++;
+  setPos(k + 1);
+};
+window.addEventListener('resize', () => cur && drawTimeline());
+
+/* ---------- playback ---------- */
+let playing = false, raf = null, vt = 0, lastFrame = 0;
+function play() {
+  if (!cur) return;
+  if (pos >= cur.E.length) setPos(0);
+  playing = true; $('bPlay').textContent = '⏸ Pause';
+  vt = pos > 0 ? cur.pts[pos - 1] : 0; lastFrame = performance.now();
+  const tick = now => {
+    if (!playing) return;
+    vt += (now - lastFrame) * +$('speed').value; lastFrame = now;
+    let p = pos;
+    while (p < cur.E.length && cur.pts[p] <= vt) p++;
+    if (p !== pos) setPos(p);
+    if (pos >= cur.E.length) { stop(); return; }
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+}
+function stop() { playing = false; cancelAnimationFrame(raf); $('bPlay').textContent = '▶ Play'; }
+$('bPlay').onclick = () => playing ? stop() : play();
+$('bStart').onclick = () => { stop(); setPos(0); };
+$('bEnd').onclick = () => { stop(); setPos(cur.E.length); };
+$('slider').oninput = () => { stop(); setPos(+$('slider').value); };
+document.addEventListener('keydown', e => {
+  if (!cur || e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') { stop(); setPos(pos + 1); e.preventDefault(); }
+  if (e.key === 'ArrowLeft') { stop(); setPos(pos - 1); e.preventDefault(); }
+  if (e.key === ' ') { playing ? stop() : play(); e.preventDefault(); }
+});
+$('dlPy').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([cur.finalText], { type: 'text/x-python' }));
+  a.download = (cur.o.student + '_' + cur.o.task).replace(/[^\p{L}\p{N}]+/gu, '_') + '.py';
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+};
+
+/* ---------- task link maker ---------- */
+function makeLink() {
+  const u = new URL('index.html', location.href);
+  const task = $('lmTask').value.trim(), st = $('lmStarter').value.trim();
+  if (task) u.searchParams.set('task', task);
+  if (st) u.searchParams.set('starter', st);
+  if ($('lmNopaste').checked) u.searchParams.set('nopaste', '1');
+  $('linkOut').textContent = u.href;
+}
+['lmTask', 'lmStarter', 'lmNopaste'].forEach(id => $(id).addEventListener('input', makeLink));
+makeLink();
+$('lmCopy').onclick = async () => {
+  try { await navigator.clipboard.writeText($('linkOut').textContent); $('lmMsg').textContent = 'Copied.'; }
+  catch (e) { $('lmMsg').textContent = 'Select the link above and copy it.'; }
+  setTimeout(() => $('lmMsg').textContent = '', 2000);
+};
+</script>
+</body>
+</html>

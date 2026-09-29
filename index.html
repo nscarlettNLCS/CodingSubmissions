@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Python Workspace</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<style>
+:root{--bg:#f5f6f8;--panel:#fff;--ink:#1c2230;--muted:#667085;--line:#dde2ea;--accent:#2b63d9;--err:#c2362b;--ok:#1f8a4c;--warn:#b7791f}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.title{font-weight:650;font-size:16px}
+.who{color:var(--muted);font-size:14px}
+.status{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--warn)}
+.dot.ready{background:var(--ok)}
+.spacer{flex:1}
+button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 12px;border-radius:8px;cursor:pointer}
+button:hover{border-color:#aab3c2}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button:disabled{opacity:.5;cursor:default}
+main{flex:1;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px;padding:12px 16px 4px;min-height:0}
+.pane{background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.pane h2{margin:0;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pane h2 button{padding:2px 8px;font-size:12px;text-transform:none;letter-spacing:0}
+#editorWrap{flex:1;min-height:0;position:relative}
+#editorWrap .CodeMirror{position:absolute;inset:0;height:auto;font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+#out{flex:1;margin:0;padding:10px 12px;overflow:auto;font:13.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+#out .err{color:var(--err)}
+#out .in{color:var(--accent)}
+#out .sys{color:var(--muted);font-style:italic}
+#out img{max-width:100%;display:block;margin:8px 0;border:1px solid var(--line);border-radius:6px;background:#fff}
+footer{padding:4px 16px 10px;font-size:12px;color:var(--muted)}
+footer b{color:var(--ink);font-weight:600}
+.rec{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--err);margin-right:5px;vertical-align:1px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1c2230;color:#fff;padding:9px 16px;border-radius:8px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;text-align:center;z-index:20}
+#toast.show{opacity:1}
+.modal-bg{position:fixed;inset:0;background:rgba(20,24,33,.5);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.modal{background:var(--panel);border-radius:12px;max-width:440px;width:100%;padding:22px 22px 18px;box-shadow:0 10px 40px rgba(0,0,0,.2)}
+.modal h1{font-size:19px;margin:0 0 4px}
+.modal p{margin:6px 0 14px;color:var(--muted);font-size:14px}
+.modal label{font-size:13px;font-weight:600;display:block;margin-bottom:4px}
+.modal input[type=text]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:8px}
+.modal .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.hidden{display:none!important}
+@media (max-width:820px){main{grid-template-columns:1fr;grid-template-rows:minmax(320px,1.2fr) minmax(200px,1fr)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="title" id="taskTitle">Python Workspace</div>
+  <div class="who" id="who"></div>
+  <div class="status"><span class="dot" id="dot"></span><span id="statusText">Loading Python…</span></div>
+  <div class="spacer"></div>
+  <button class="primary" id="runBtn" disabled title="Ctrl+Enter">▶ Run</button>
+  <button id="saveBtn" title="Ctrl+S">⬇ Save work</button>
+  <button id="openBtn">Open saved work</button>
+  <button id="resetBtn">Start again</button>
+  <input type="file" id="fileIn" accept=".json,application/json" class="hidden">
+</header>
+<main>
+  <section class="pane">
+    <h2><span>Code</span></h2>
+    <div id="editorWrap"></div>
+  </section>
+  <section class="pane">
+    <h2><span>Output</span><button id="clearBtn">Clear</button></h2>
+    <pre id="out"></pre>
+  </section>
+</main>
+<footer><span class="rec"></span><b>This workspace records how your code is written</b> (typing, pasting, running, leaving the page) so your teacher can see your process. Nothing is sent anywhere: your work stays in this browser until you click <b>Save work</b> and hand in the file.</footer>
+
+<div class="modal-bg hidden" id="startModal">
+  <div class="modal">
+    <h1 id="startTitle">Python Workspace</h1>
+    <p>Type your full name exactly as your teacher knows it. If you have worked on this task in this browser before, your work will reopen.</p>
+    <label for="nameIn">Full name</label>
+    <input type="text" id="nameIn" autocomplete="off" placeholder="e.g. Kim Minjun">
+    <div class="row">
+      <button id="startOpen">Open saved work file</button>
+      <button class="primary" id="startGo">Start</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ---------- settings from the link ---------- */
+const params = new URLSearchParams(location.search);
+const TASK = (params.get('task') || 'Python task').trim().slice(0, 80);
+const NOPASTE = params.get('nopaste') === '1';
+const STARTER_URL = params.get('starter');
+const FORMAT = 'pyhist-1';
+
+/* ---------- checksum chain (shared with teacher page) ---------- */
+function cyrb53(str, seed = 0) {
+  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0, ch; i < str.length; i++) {
+    ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+  h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+  h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
+function initChain(o) { return cyrb53([o.format, o.student, o.task, o.created].join('|'), 7919); }
+function nextChain(prev, ev) { return cyrb53(prev + '|' + JSON.stringify(ev), 7919); }
+function replayText(events) {
+  let text = '';
+  for (const ev of events) if (ev[0] === 'e') text = text.slice(0, ev[2]) + ev[4] + text.slice(ev[2] + ev[3]);
+  return text;
+}
+
+/* ---------- UI helpers ---------- */
+const $ = id => document.getElementById(id);
+const out = $('out');
+let toastTimer;
+function toast(msg, ms = 2600) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+}
+const MAX_OUT = 200000;
+function write(text, cls) {
+  if (out.textContent.length > MAX_OUT) return;
+  const span = document.createElement('span');
+  if (cls) span.className = cls;
+  span.textContent = text;
+  out.appendChild(span);
+  if (out.textContent.length > MAX_OUT) {
+    const s = document.createElement('span'); s.className = 'sys';
+    s.textContent = '\n[Output limit reached — further output hidden]\n'; out.appendChild(s);
+  }
+  out.scrollTop = out.scrollHeight;
+}
+$('taskTitle').textContent = TASK;
+$('startTitle').textContent = TASK;
+document.title = TASK + ' · Python Workspace';
+
+/* ---------- editor ---------- */
+const cm = CodeMirror($('editorWrap'), {
+  mode: 'python', lineNumbers: true, indentUnit: 4, tabSize: 4, matchBrackets: true,
+  readOnly: 'nocursor',
+  extraKeys: {
+    Tab: c => c.somethingSelected() ? c.indentSelection('add') : c.replaceSelection(' '.repeat(4), 'end', '+input'),
+    'Shift-Tab': c => c.indentSelection('subtract'),
+    'Ctrl-Enter': () => run(), 'Cmd-Enter': () => run(),
+    'Ctrl-S': () => saveFile(), 'Cmd-S': () => saveFile()
+  }
+});
+
+/* ---------- recording state ---------- */
+let S = null;          // current session object
+let silent = false;    // true while we set text ourselves
+let running = false;
+let lastClip = null;   // text last copied/cut inside the editor
+let quietUntil = 0;    // ignore blur while file dialogs are open
+const keyFor = (task, name) => 'pyhist:' + task + ':' + name.toLowerCase();
+
+function push(ev) {
+  if (!S) return;
+  S.events.push(ev);
+  S.chain = nextChain(S.chain, ev);
+  scheduleSave();
+}
+let saveTimer = null;
+function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(flushSave, 800); }
+let warnedQuota = false;
+function flushSave() {
+  clearTimeout(saveTimer);
+  if (!S) return;
+  try { localStorage.setItem(keyFor(S.task, S.student), JSON.stringify(S)); }
+  catch (e) {
+    if (!warnedQuota) { warnedQuota = true; toast('This browser could not store your work. Use “Save work” often!', 5000); }
+  }
+}
+
+function mapOrigin(o) {
+  if (!o) return 'x';
+  if (o === 'paste') return 'p';
+  if (o === 'undo' || o === 'redo') return 'u';
+  if (o === 'drag') return 'm';
+  if (o === 'cut' || o === '+delete') return 'd';
+  if (o === 'setValue') return 's';
+  if (o[0] === '+' || o[0] === '*') return 't';
+  return 'x';
+}
+
+cm.on('beforeChange', (c, ch) => {
+  if (silent || !S) return;
+  const i = c.indexFromPos(ch.from), j = c.indexFromPos(ch.to);
+  const s = ch.text.join('\n');
+  let o = mapOrigin(ch.origin);
+  if (o === 'p' || ch.origin === 'drop') {
+    const internal = s.length < 3 || s === lastClip || c.getValue().includes(s);
+    if (!internal && NOPASTE) {
+      ch.cancel();
+      toast('Pasting from outside the editor is turned off for this task.');
+      return;
+    }
+    o = internal ? 'q' : 'p';
+  }
+  push(['e', Date.now(), i, j - i, s, o]);
+});
+function recordClip(c) {
+  if (!S) return;
+  let from, to;
+  if (c.somethingSelected()) { from = c.getCursor('from'); to = c.getCursor('to'); }
+  else { const l = c.getCursor().line; from = { line: l, ch: 0 }; to = l + 1 < c.lineCount() ? { line: l + 1, ch: 0 } : { line: l, ch: c.getLine(l).length }; }
+  const i = c.indexFromPos(from), j = c.indexFromPos(to);
+  lastClip = c.getRange(from, to);
+  push(['c', Date.now(), i, j - i]);
+}
+cm.on('copy', recordClip);
+cm.on('cut', recordClip);
+
+/* away from the page */
+let away = false;
+function goAway() { if (!S || away || running || Date.now() < quietUntil) return; away = true; push(['a', Date.now()]); }
+function comeBack() { if (!S || !away) return; away = false; push(['b', Date.now()]); }
+document.addEventListener('visibilitychange', () => document.hidden ? goAway() : comeBack());
+window.addEventListener('blur', goAway);
+window.addEventListener('focus', comeBack);
+window.addEventListener('pagehide', flushSave);
+
+/* ---------- sessions ---------- */
+function setDoc(text) {
+  silent = true; cm.setValue(text); cm.clearHistory(); silent = false;
+  cm.setOption('readOnly', false);
+}
+function showWho() { $('who').textContent = S ? '· ' + S.student : ''; }
+
+async function fetchStarter() {
+  if (!STARTER_URL) return '';
+  try {
+    const r = await fetch(STARTER_URL, { cache: 'no-store' });
+    if (!r.ok) throw 0;
+    return (await r.text()).replace(/\r\n?/g, '\n');
+  } catch (e) { toast('Could not load the starter code for this task.'); return ''; }
+}
+
+async function newSession(name) {
+  S = { format: FORMAT, task: TASK, student: name, created: Date.now(), nopaste: NOPASTE, events: [], chain: '' };
+  S.chain = initChain(S);
+  setDoc('');
+  push(['s', Date.now()]);
+  const starter = await fetchStarter();
+  if (starter) {
+    push(['e', Date.now(), 0, 0, starter, 's']);
+    setDoc(starter);
+  }
+  flushSave();
+}
+
+function resumeSession(obj) {
+  S = obj;
+  setDoc(replayText(S.events));
+  push(['s', Date.now()]);
+  flushSave();
+}
+
+async function startWithName() {
+  const name = $('nameIn').value.trim().replace(/\s+/g, ' ');
+  if (name.length < 2) { $('nameIn').focus(); toast('Please type your full name.'); return; }
+  $('startModal').classList.add('hidden');
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(keyFor(TASK, name)) || 'null'); } catch (e) {}
+  if (saved && saved.format === FORMAT && Array.isArray(saved.events)) {
+    resumeSession(saved);
+    toast('Welcome back — your work has been reopened.');
+  } else {
+    await newSession(name);
+  }
+  showWho();
+  cm.focus();
+}
+$('startGo').onclick = startWithName;
+$('nameIn').addEventListener('keydown', e => { if (e.key === 'Enter') startWithName(); });
+$('startModal').classList.remove('hidden');
+setTimeout(() => $('nameIn').focus(), 50);
+
+/* ---------- save / open files ---------- */
+function safe(s) { return s.replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_|_$/g, '').slice(0, 40) || 'work'; }
+function saveFile() {
+  if (!S) return;
+  push(['v', Date.now()]);
+  const final = cm.getValue();
+  const file = Object.assign({}, S, { final, savedAt: Date.now(), replayOk: replayText(S.events) === final });
+  const blob = new Blob([JSON.stringify(file)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = safe(S.student) + '_' + safe(S.task) + '.pyhist.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  flushSave();
+  toast('Saved. Hand in the downloaded .pyhist.json file.');
+}
+$('saveBtn').onclick = saveFile;
+
+function pickFile() { quietUntil = Date.now() + 120000; $('fileIn').value = ''; $('fileIn').click(); }
+$('openBtn').onclick = pickFile;
+$('startOpen').onclick = pickFile;
+$('fileIn').addEventListener('change', async () => {
+  quietUntil = 0;
+  const f = $('fileIn').files[0];
+  if (!f) return;
+  let obj;
+  try { obj = JSON.parse(await f.text()); } catch (e) { toast('That is not a saved work file.'); return; }
+  if (!obj || obj.format !== FORMAT || !Array.isArray(obj.events)) { toast('That is not a saved work file.'); return; }
+  let c = initChain(obj);
+  for (const ev of obj.events) c = nextChain(c, ev);
+  const intact = c === obj.chain;
+  if (S && S.events.some(e => e[0] === 'e' && e[5] !== 's') &&
+      !confirm('Opening this file will replace what is in the editor now. Continue?')) return;
+  delete obj.final; delete obj.savedAt; delete obj.replayOk;
+  obj.chain = c;
+  S = obj;
+  setDoc(replayText(S.events));
+  push(['l', Date.now(), intact ? 1 : 0]);
+  push(['s', Date.now()]);
+  flushSave();
+  $('startModal').classList.add('hidden');
+  showWho();
+  if (obj.task !== TASK) toast('Note: this file is for the task “' + obj.task + '”.', 4000);
+  else toast(intact ? 'Your saved work has been opened.' : 'Opened — but this file was changed outside the workspace. Your teacher will see this.', 5000);
+});
+
+$('resetBtn').onclick = async () => {
+  if (!S) return;
+  if (!confirm('Start again? This deletes your code AND its history in this browser. It cannot be undone.')) return;
+  const name = S.student;
+  try { localStorage.removeItem(keyFor(S.task, name)); } catch (e) {}
+  await newSession(name);
+  out.textContent = '';
+  toast('Started again.');
+};
+$('clearBtn').onclick = () => { out.textContent = ''; };
+
+/* ---------- Python ---------- */
+let py = null;
+let pendingLine = '';
+const dec = new TextDecoder();
+function outWrite(cls) {
+  return { write: buf => { const t = dec.decode(buf, { stream: true }); write(t, cls); const k = t.lastIndexOf('\n'); pendingLine = k >= 0 ? t.slice(k + 1) : pendingLine + t; return buf.length; } };
+}
+(async () => {
+  try {
+    py = await loadPyodide();
+    py.setStdout(outWrite(''));
+    py.setStderr(outWrite('err'));
+    py.setStdin({ stdin: () => {
+      const v = window.prompt(pendingLine.trim() || 'Input:', '');
+      if (v === null) return undefined;
+      write(v + '\n', 'in'); pendingLine = '';
+      return v;
+    }});
+    py.runPython("import os\nos.environ['MPLBACKEND']='AGG'\nimport warnings\nwarnings.filterwarnings('ignore', message='.*non-interactive.*')\nwarnings.filterwarnings('ignore', message='.*cannot be shown.*')");
+    $('dot').classList.add('ready');
+    $('statusText').textContent = 'Python ready';
+    $('runBtn').disabled = false;
+  } catch (e) {
+    $('statusText').textContent = 'Python failed to load — check your internet connection and reload';
+  }
+})();
+
+function cleanErr(m) {
+  const L = String(m).split('\n'), o = [];
+  for (let i = 0; i < L.length; i++) {
+    const t = L[i].trim();
+    if (t.startsWith('File "/lib') || t.startsWith('File "/usr')) {
+      while (i + 1 < L.length && !L[i + 1].trim().startsWith('File') && /^\s{4,}/.test(L[i + 1])) i++;
+      continue;
+    }
+    o.push(L[i].replace(/File "<exec>"/g, 'File "your code"'));
+  }
+  return o.join('\n').trim();
+}
+
+const FIGS = `
+import sys
+_imgs = []
+if 'matplotlib.pyplot' in sys.modules:
+    import io, base64
+    _plt = sys.modules['matplotlib.pyplot']
+    for _n in _plt.get_fignums():
+        _b = io.BytesIO()
+        _plt.figure(_n).savefig(_b, format='png', bbox_inches='tight')
+        _imgs.append(base64.b64encode(_b.getvalue()).decode())
+    _plt.close('all')
+_imgs
+`;
+
+async function run() {
+  if (!py || running || !S) return;
+  running = true; $('runBtn').disabled = true;
+  flushSave();
+  out.textContent = ''; pendingLine = '';
+  const code = cm.getValue();
+  let ok = 1, msg = '';
+  $('statusText').textContent = 'Running…';
+  await new Promise(r => setTimeout(r, 30));
+  try {
+    await py.loadPackagesFromImports(code);
+    const g = py.globals.get('dict')();
+    g.set('__name__', '__main__');
+    py.runPython(code, { globals: g });
+    g.destroy();
+  } catch (e) {
+    ok = 0;
+    msg = cleanErr(e.message || e);
+    write((out.textContent && !out.textContent.endsWith('\n') ? '\n' : '') + msg + '\n', 'err');
+  }
+  try {
+    const imgs = py.runPython(FIGS).toJs();
+    for (const b64 of imgs) { const im = document.createElement('img'); im.src = 'data:image/png;base64,' + b64; out.appendChild(im); }
+  } catch (e) {}
+  const last = msg.split('\n').filter(Boolean).pop() || '';
+  push(['r', Date.now(), ok, ok ? '' : last.slice(0, 200)]);
+  $('statusText').textContent = 'Python ready';
+  running = false; $('runBtn').disabled = false;
+  cm.focus();
+}
+$('runBtn').onclick = run;
+</script>
+</body>
+</html>
